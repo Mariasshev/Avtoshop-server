@@ -1,0 +1,6 @@
+@AVTOSHOPWebApi_HostAddress = http://localhost:5227
+
+GET {{AVTOSHOPWebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

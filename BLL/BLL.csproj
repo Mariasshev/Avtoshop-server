@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.2.0" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <!--<ProjectReference Include="..\AVTOSHOPWebApi\AVTOSHOPWebApi.csproj" />-->
+    <ProjectReference Include="..\ClassLibrary1\Data_Access.csproj" />
+    <ProjectReference Include="..\Data-Transfer-Object\Data-Transfer-Object.csproj" />
+  </ItemGroup>
+
+</Project>
