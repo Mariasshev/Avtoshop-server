@@ -5,6 +5,7 @@ using BLL.Interfaces;
 using BLL.Services;
 using Data_Access.Repositories;
 
+
 var builder = WebApplication.CreateBuilder(args);
 // Добавляем DbContext
 builder.Services.AddDbContext<CarContext>(options =>
@@ -27,8 +28,19 @@ builder.Services.AddControllers().AddJsonOptions(x =>
     x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 var app = builder.Build();
+app.UseCors("AllowAll");
+
 
 using (var scope = app.Services.CreateScope())
 {
