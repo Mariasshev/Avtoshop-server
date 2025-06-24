@@ -9,6 +9,7 @@ using Data_Access.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,6 +75,15 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+app.UseHttpsRedirection();
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "wwwroot")),
+    RequestPath = ""
+});
+
+app.UseStaticFiles();
 
 app.UseCors("AllowAll");
 
@@ -85,8 +95,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-app.UseHttpsRedirection();
 
 app.MapControllers();
 
@@ -136,7 +144,7 @@ using (var scope = app.Services.CreateScope())
                 Color = "Чёрный",
                 VIN = "TESTVIN001",
                 Price = 13200,
-                Photo = "https://example.com/car1.jpg",
+                Photo = "/images/cars/toyota_corolla_2017.jpg",
                 isOnStock = true,
                 SalerId = saler.Id
             },
@@ -156,7 +164,7 @@ using (var scope = app.Services.CreateScope())
                 Color = "Белый",
                 VIN = "TESTVIN002",
                 Price = 14900,
-                Photo = "https://example.com/car2.jpg",
+                Photo = "/images/cars/ford_focus_2019.jpg",
                 isOnStock = true,
                 SalerId = saler.Id
             },
@@ -176,7 +184,7 @@ using (var scope = app.Services.CreateScope())
                 Color = "Серебристый",
                 VIN = "TESTVIN003",
                 Price = 45000,
-                Photo = "https://example.com/car3.jpg",
+                Photo = "/images/cars/bmw_x5_2020.jpg",
                 isOnStock = true,
                 SalerId = saler.Id
             },
@@ -196,7 +204,7 @@ using (var scope = app.Services.CreateScope())
                 Color = "Красный",
                 VIN = "TESTVIN004",
                 Price = 16000,
-                Photo = "https://example.com/car4.jpg",
+                Photo = "/images/cars/ford_focus_2018.jpg",
                 isOnStock = true,
                 SalerId = saler.Id
             },
@@ -216,7 +224,7 @@ using (var scope = app.Services.CreateScope())
                 Color = "Чёрный",
                 VIN = "TESTVIN005",
                 Price = 38000,
-                Photo = "https://example.com/car5.jpg",
+                Photo = "/images/cars/mercedes_C_2019.jpg",
                 isOnStock = true,
                 SalerId = saler.Id
             },
@@ -236,7 +244,7 @@ using (var scope = app.Services.CreateScope())
                 Color = "Синий",
                 VIN = "TESTVIN006",
                 Price = 40000,
-                Photo = "https://example.com/car6.jpg",
+                Photo = "/images/cars/audi_A4_2021.jpg",
                 isOnStock = true,
                 SalerId = saler.Id
             }
