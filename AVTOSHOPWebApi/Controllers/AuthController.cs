@@ -4,6 +4,12 @@ using Data_Access.Models;
 using Data_Access;
 using Data_Access.Repositories;
 
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+
+
 using BLL.Interfaces;
 using Data_Transfer_Object.DTO.UserDTO;
 using System.Linq;
@@ -21,6 +27,31 @@ namespace AVTOSHOPWebApi.Controllers
             _userService = userService;
         }
 
+        private string GenerateJwtToken(User user)
+        {
+            var secretKey = "ОченьДлинный_Секретный_Ключ_Минимум32символа";
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var claims = new[]
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, user.Email),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                // другие claims
+            };
+
+            var token = new JwtSecurityToken(
+                issuer: "yourIssuer",
+                audience: "yourAudience",
+                claims: claims,
+                expires: DateTime.UtcNow.AddHours(1),
+                signingCredentials: creds);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+
+
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] UserRegisterDTO dto)
         {
@@ -32,15 +63,20 @@ namespace AVTOSHOPWebApi.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] UserLoginDTO dto)
         {
-            var loginResult = await _userService.LoginAsync(dto);
+            var user = await _userService.ValidateUserAsync(dto);
 
-            if (!loginResult.Success)
-                return Unauthorized(loginResult.ErrorMessage);
+            if (user == null)
+                return Unauthorized("Неверный email или пароль");
 
-            return Ok(new { token = loginResult.Token, name = loginResult.Name, message = "Успешная авторизация" });
+            var token = GenerateJwtToken(user);
+
+            return Ok(new
+            {
+                token,
+                name = user.Name,
+                message = "Успешная авторизация"
+            });
         }
-
-
 
     }
 

@@ -10,8 +10,13 @@ namespace Data_Transfer_Object.DTO.CarDTO
     {
         public int Id { get; set; }
         public string Photo { get; set; }
-        //public string Title { get; set; }  // Например, "Toyota Corolla 2020"
-        public decimal Price { get; set; }
+        public string Title { get; set; }  // "Toyota Corolla 2020"
+        public string Brand { get; set; }  // "Toyota Corolla 2020"
+        public string Model { get; set; }  // "Toyota Corolla 2020"
+
+        public string Fuel { get; set; }
+        public string Badge { get; set; }
+        public float Price { get; set; }
         public string Transmission { get; set; }
         public int Year { get; set; }
         public int Mileage { get; set; }

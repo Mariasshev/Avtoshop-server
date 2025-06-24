@@ -2,11 +2,11 @@
 using Microsoft.EntityFrameworkCore;
 using System.Reflection.Emit;
 
+
 namespace Data_Access.Context
 {
     public class CarContext : DbContext
     {
-
 
         public DbSet<Car> Cars { get; set; }
         public DbSet<User> Users { get; set; }
@@ -26,11 +26,12 @@ namespace Data_Access.Context
 
         protected override void OnModelCreating(ModelBuilder mb)
         {
+
             mb.Entity<Order>()
                 .HasOne(o => o.Car)
                 .WithOne(c => c.Order)
                 .HasForeignKey<Order>(o => o.CarId)
-                .OnDelete(DeleteBehavior.Restrict); // или SetNull, по твоей логике
+                .OnDelete(DeleteBehavior.Restrict); // или SetNull, по твоей 
         }
 
 

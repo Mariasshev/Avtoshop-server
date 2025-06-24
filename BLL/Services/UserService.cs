@@ -17,6 +17,12 @@ namespace BLL.Services
             _userRepository = userRepository;
         }
 
+        public async Task<User?> GetUserByEmailAsync(string email)
+        {
+            return await _userRepository.FindByEmailAsync(email);
+        }
+
+
         public async Task<bool> RegisterAsync(UserRegisterDTO dto)
         {
             var existing = await _userRepository.FindByEmailAsync(dto.Email);
@@ -45,21 +51,15 @@ namespace BLL.Services
         //    var result = _hasher.VerifyHashedPassword(user, user.Password, dto.Password);
         //    return result == PasswordVerificationResult.Success ? "TOKEN_FAKE" : null;
         //}
-        public async Task<LoginResult> LoginAsync(UserLoginDTO dto)
+        public async Task<User?> ValidateUserAsync(UserLoginDTO dto)
         {
             var user = await _userRepository.FindByEmailAsync(dto.Email);
-            if (user == null)
-                return new LoginResult { Success = false, ErrorMessage = "Пользователь с таким email не найден" };
+            if (user == null) return null;
 
             var result = _hasher.VerifyHashedPassword(user, user.Password, dto.Password);
-            if (result != PasswordVerificationResult.Success)
-                return new LoginResult { Success = false, ErrorMessage = "Неверный пароль" };
-
-            // Тут должен быть настоящий JWT токен, пока заглушка
-            var token = "TOKEN_FAKE";
-
-            return new LoginResult { Success = true, Token = token, Name = user.Name };
+            return result == PasswordVerificationResult.Success ? user : null;
         }
+
 
 
 
