@@ -4,6 +4,8 @@ using System.IdentityModel.Tokens.Jwt;
 using Data_Access.Repositories;
 using System.Security.Claims;
 using Data_Transfer_Object.DTO.UserDTO;
+using Data_Access.Models;
+using Microsoft.AspNetCore.Identity;
 
 namespace AVTOSHOPWebApi.Controllers
 {
@@ -144,6 +146,34 @@ namespace AVTOSHOPWebApi.Controllers
                 return StatusCode(500, "Ошибка сервера при загрузке фото");
             }
         }
+
+
+
+        [HttpPut("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            var email = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var user = await _userRepository.GetUserByEmailAsync(email);
+            if (user == null)
+                return NotFound("Пользователь не найден");
+
+            // Проверка текущего пароля
+            var hasher = new PasswordHasher<User>();
+            var result = hasher.VerifyHashedPassword(user, user.Password, dto.CurrentPassword);
+            if (result == PasswordVerificationResult.Failed)
+                return BadRequest("Текущий пароль неверный");
+
+            // Устанавливаем новый пароль
+            user.Password = hasher.HashPassword(user, dto.NewPassword);
+            await _userRepository.UpdateAsync(user);
+
+            return Ok("Пароль успешно изменён");
+        }
+
 
 
 
