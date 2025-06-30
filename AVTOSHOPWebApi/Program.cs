@@ -5,32 +5,44 @@ using BLL.Interfaces;
 using BLL.Services;
 using Data_Access.Repositories;
 
-// JWT
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.Extensions.FileProviders;
+using System.IdentityModel.Tokens.Jwt;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Подключаем DbContext с указанием миграционной сборки
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.SetMinimumLevel(LogLevel.Debug); // или LogLevel.Error
+
+
+// DB
 builder.Services.AddDbContext<CarContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection"),
         sqlOptions =>
         {
             sqlOptions.MigrationsAssembly("Data_Access");
-            sqlOptions.EnableRetryOnFailure(); 
+            sqlOptions.EnableRetryOnFailure();
         }
     )
 );
 
-
-// Регистрируем репозитории и сервисы
+// Репозитории и сервисы
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 
-// JWT аутентификация
+
+
+// JWT
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var key = jwtSettings["Key"];
+var issuer = jwtSettings["Issuer"];
+var audience = jwtSettings["Audience"];
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -44,26 +56,65 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
+        ValidIssuer = issuer,
+        ValidAudience = audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+        NameClaimType = JwtRegisteredClaimNames.Sub // добавлено!
+    };
 
-        ValidIssuer = "yourIssuer",
-        ValidAudience = "yourAudience",
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("ОченьДлинный_Секретный_Ключ_Минимум32символа"))
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogError("JWT auth failed: {0}", context.Exception.Message);
+            return Task.CompletedTask;
+        }
     };
 });
 
-builder.Services.AddAuthorization();
 
-// Добавляем контроллеры и swagger
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddControllers().AddJsonOptions(x =>
 {
     x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
 
-// CORS - разрешаем всё (только для разработки, в проде настрой по-другому)
+// Swagger + JWT
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "AVTOSHOP API", Version = "v1" });
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = @"Введите 'Bearer' и пробел, а затем токен. Пример: 'Bearer 12345abcdef'",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                },
+                Scheme = "oauth2",
+                Name = "Bearer",
+                In = Microsoft.OpenApi.Models.ParameterLocation.Header
+            },
+            new List<string>()
+        }
+    });
+});
+
+// CORS (на разработку)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -75,16 +126,14 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Middleware
 app.UseHttpsRedirection();
 app.UseStaticFiles(new StaticFileOptions
 {
-    FileProvider = new PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "wwwroot")),
+    FileProvider = new PhysicalFileProvider(Path.Combine(builder.Environment.ContentRootPath, "wwwroot")),
     RequestPath = ""
 });
-
-app.UseStaticFiles();
-
 app.UseCors("AllowAll");
 
 app.UseAuthentication();
@@ -97,162 +146,5 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
-
-
-// Заполняем базу начальными данными
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<CarContext>();
-
-    // НЕ вызываем EnsureCreated, т.к. используем миграции!
-
-    // Добавляем продавца, если нет
-    if (!context.Salers.Any())
-    {
-        var saler = new Saler
-        {
-            Name = "Иван",
-            Photo = "https://example.com/saler.jpg",
-            Number = "123456789",
-            Email = "ivan@example.com",
-            Adress = "Киев, Украина"
-        };
-        context.Salers.Add(saler);
-        context.SaveChanges();
-    }
-
-    // Добавляем машины, если нет
-    if (!context.Cars.Any())
-    {
-        var saler = context.Salers.First();
-
-        var cars = new List<Car>
-        {
-            new Car
-            {
-                Brand = "Toyota",
-                Model = "Corolla",
-                Mileage = 98000,
-                Year = 2017,
-                Transmission = "Автомат",
-                DriverType = "Полный",
-                Condition = "Отличное",
-                EngineSize = 2f,
-                FuelType = "Diesel",
-                Door = 4,
-                Cylinder = 4,
-                Color = "Чёрный",
-                VIN = "TESTVIN001",
-                Price = 13200,
-                Photo = "/images/cars/toyota_corolla_2017.jpg",
-                isOnStock = true,
-                SalerId = saler.Id
-            },
-            new Car
-            {
-                Brand = "Ford",
-                Model = "Focus",
-                Mileage = 76000,
-                Year = 2019,
-                Transmission = "Механика",
-                DriverType = "Передний",
-                Condition = "Хорошее",
-                EngineSize = 1f,
-                FuelType = "Diesel",
-                Door = 5,
-                Cylinder = 3,
-                Color = "Белый",
-                VIN = "TESTVIN002",
-                Price = 14900,
-                Photo = "/images/cars/ford_focus_2019.jpg",
-                isOnStock = true,
-                SalerId = saler.Id
-            },
-            new Car
-            {
-                Brand = "BMW",
-                Model = "X5",
-                Mileage = 45000,
-                Year = 2020,
-                Transmission = "Автомат",
-                DriverType = "Полный",
-                Condition = "Новое",
-                EngineSize = 3f,
-                FuelType = "Diesel",
-                Door = 5,
-                Cylinder = 6,
-                Color = "Серебристый",
-                VIN = "TESTVIN003",
-                Price = 45000,
-                Photo = "/images/cars/bmw_x5_2020.jpg",
-                isOnStock = true,
-                SalerId = saler.Id
-            },
-            new Car
-            {
-                Brand = "Ford",
-                Model = "Focus",
-                Mileage = 67000,
-                Year = 2018,
-                Transmission = "Автомат",
-                DriverType = "Передний",
-                Condition = "Хорошее",
-                EngineSize = 2f,
-                FuelType = "Gasoline",
-                Door = 4,
-                Cylinder = 4,
-                Color = "Красный",
-                VIN = "TESTVIN004",
-                Price = 16000,
-                Photo = "/images/cars/ford_focus_2018.jpg",
-                isOnStock = true,
-                SalerId = saler.Id
-            },
-            new Car
-            {
-                Brand = "Mercedes-Benz",
-                Model = "C-Class",
-                Mileage = 53000,
-                Year = 2019,
-                Transmission = "Автомат",
-                DriverType = "Задний",
-                Condition = "Отличное",
-                EngineSize = 2.2f,
-                FuelType = "Diesel",
-                Door = 4,
-                Cylinder = 4,
-                Color = "Чёрный",
-                VIN = "TESTVIN005",
-                Price = 38000,
-                Photo = "/images/cars/mercedes_C_2019.jpg",
-                isOnStock = true,
-                SalerId = saler.Id
-            },
-            new Car
-            {
-                Brand = "Audi",
-                Model = "A4",
-                Mileage = 42000,
-                Year = 2021,
-                Transmission = "Автомат",
-                DriverType = "Полный",
-                Condition = "Новое",
-                EngineSize = 2f,
-                FuelType = "Diesel",
-                Door = 4,
-                Cylinder = 4,
-                Color = "Синий",
-                VIN = "TESTVIN006",
-                Price = 40000,
-                Photo = "/images/cars/audi_A4_2021.jpg",
-                isOnStock = true,
-                SalerId = saler.Id
-            }
-        };
-
-        context.Cars.AddRange(cars);
-        context.SaveChanges();
-    }
-}
 
 app.Run();

@@ -43,14 +43,6 @@ namespace BLL.Services
             return true;
         }
 
-        //public async Task<string?> LoginAsync(UserLoginDTO dto)
-        //{
-        //    var user = await _userRepository.FindByEmailAsync(dto.Email);
-        //    if (user == null) return null;
-
-        //    var result = _hasher.VerifyHashedPassword(user, user.Password, dto.Password);
-        //    return result == PasswordVerificationResult.Success ? "TOKEN_FAKE" : null;
-        //}
         public async Task<User?> ValidateUserAsync(UserLoginDTO dto)
         {
             var user = await _userRepository.FindByEmailAsync(dto.Email);
@@ -59,11 +51,5 @@ namespace BLL.Services
             var result = _hasher.VerifyHashedPassword(user, user.Password, dto.Password);
             return result == PasswordVerificationResult.Success ? user : null;
         }
-
-
-
-
     }
-
-
 }
