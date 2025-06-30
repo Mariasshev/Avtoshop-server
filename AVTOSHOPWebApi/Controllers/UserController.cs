@@ -44,7 +44,8 @@ namespace AVTOSHOPWebApi.Controllers
                 email = user.Email,
                 phoneNumber = user.PhoneNumber,
                 city = user.City,
-                country = user.Country
+                country = user.Country,
+                photoUrl = user.PhotoUrl
             });
         }
 
@@ -76,6 +77,7 @@ namespace AVTOSHOPWebApi.Controllers
                 user.PhoneNumber = dto.PhoneNumber ?? user.PhoneNumber;
                 user.City = dto.City ?? user.City;
                 user.Country = dto.Country ?? user.Country;
+                //user.PhotoUrl = dto.PhotoUrl ?? user.PhotoUrl;
 
                 // Email обычно не меняют, но если тебе нужно:
                 // user.Email = dto.Email ?? user.Email;
@@ -91,6 +93,58 @@ namespace AVTOSHOPWebApi.Controllers
                 return StatusCode(500, "Ошибка сервера при обновлении профиля.");
             }
         }
+
+
+
+        //
+        [HttpPut("profile/photo")]
+        [Authorize]
+        public async Task<IActionResult> UploadProfilePhoto(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("Файл не выбран");
+
+            // Получаем email из токена
+            var email = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (email == null)
+                return Unauthorized();
+
+            // Ищем пользователя в базе
+            var user = await _userRepository.GetUserByEmailAsync(email);
+            if (user == null)
+                return NotFound("Пользователь не найден");
+
+            try
+            {
+                // Генерируем имя файла, например, с GUID и расширением
+                var uploadsFolder = Path.Combine("wwwroot", "uploads", "profile_photos");
+                if (!Directory.Exists(uploadsFolder))
+                    Directory.CreateDirectory(uploadsFolder);
+
+                var fileExtension = Path.GetExtension(file.FileName);
+                var fileName = $"{Guid.NewGuid()}{fileExtension}";
+                var filePath = Path.Combine(uploadsFolder, fileName);
+
+                // Сохраняем файл на диск
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                // Сохраняем путь к фото в базе (относительный путь)
+                user.PhotoUrl = $"/uploads/profile_photos/{fileName}";
+                await _userRepository.UpdateAsync(user);
+
+                // Отдаем клиенту путь к фото (можно полный URL, если нужно)
+                return Ok(new { photoUrl = user.PhotoUrl });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка загрузки фото: {ex.Message}");
+                return StatusCode(500, "Ошибка сервера при загрузке фото");
+            }
+        }
+
 
 
     }
