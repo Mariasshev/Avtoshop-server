@@ -119,32 +119,33 @@ namespace AVTOSHOPWebApi.Controllers
         public async Task<ActionResult<CarCreateDto>> GetCarDetails(int id)
         {
             var car = await _context.Cars
-                .Where(c => c.Id == id)
-                .Select(c => new CarCreateDto
-                {
-                    Id = c.Id,
-                    Mileage = c.Mileage,
-                    Year = c.Year,
-                    Transmission = c.Transmission,
-                    FuelType = c.FuelType,
-                    Brand = c.Brand,
-                    Model = c.Model,
-                    DriverType = c.DriverType,
-                    Condition = c.Condition,
-                    EngineSize = c.EngineSize,
-                    Door = c.Door,
-                    Cylinder = c.Cylinder,
-                    Color = c.Color,
-                    VIN = c.VIN,
-                    Price = c.Price,
-                    Description = c.Description,
-                    //IsOnStock = c.isOnStock
-                })
-                .FirstOrDefaultAsync();
+                .Include(c => c.CarPhotos)
+                .FirstOrDefaultAsync(c => c.Id == id);
 
             if (car == null) return NotFound();
 
-            return Ok(car);
+            var dto = new CarCreateDto
+            {
+                Id = car.Id,
+                Mileage = car.Mileage,
+                Year = car.Year,
+                Transmission = car.Transmission,
+                FuelType = car.FuelType,
+                Brand = car.Brand,
+                Model = car.Model,
+                DriverType = car.DriverType,
+                Condition = car.Condition,
+                EngineSize = car.EngineSize,
+                Door = car.Door,
+                Cylinder = car.Cylinder,
+                Color = car.Color,
+                VIN = car.VIN,
+                Price = car.Price,
+                Description = car.Description,
+                PhotoUrls = car.CarPhotos?.Select(cp => cp.PhotoUrl).ToList() ?? new List<string>()
+            };
+
+            return Ok(dto);
         }
 
 
@@ -152,42 +153,44 @@ namespace AVTOSHOPWebApi.Controllers
         public async Task<IActionResult> UpdateCar(int id, [FromForm] CarCreateDto dto)
         {
             if (id != dto.Id)
-            {
-                Console.WriteLine($"Id from URL: {id}, Id from body: {dto.Id}");
                 return BadRequest(new { error = "Id in URL and body do not match" });
-            }
-                
-
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
 
             var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "userId");
             if (userIdClaim == null)
-                return Unauthorized(new { error = "User claim not found" });
+                return Unauthorized();
 
             if (!int.TryParse(userIdClaim.Value, out int userId))
-                return Unauthorized(new { error = "Invalid user id in claim" });
+                return Unauthorized();
+
+            List<string> photosToDeleteList = new();
+            if (!string.IsNullOrEmpty(dto.PhotosToDelete))
+            {
+                photosToDeleteList = System.Text.Json.JsonSerializer.Deserialize<List<string>>(dto.PhotosToDelete);
+                Console.WriteLine("PhotosToDelete JSON: " + dto.PhotosToDelete);
+                Console.WriteLine("Deserialized list:");
+                foreach (var p in photosToDeleteList)
+                {
+                    Console.WriteLine("- " + p);
+                }
+
+            }
+
+            //List<string> photosToDeleteList = dto.PhotosToDelete ?? new List<string>();
 
             try
             {
-                var updatedCar = await _carService.UpdateCarWithPhotosAsync(id, dto, userId);
+                var updatedCar = await _carService.UpdateCarWithPhotosAsync(id, dto, userId, photosToDeleteList);
+
                 if (updatedCar == null)
-                    return NotFound(new { error = "Car not found or access denied" });
+                    return NotFound();
 
                 return Ok(updatedCar);
             }
             catch (Exception ex)
             {
-                var errorDetails = new
-                {
-                    message = ex.Message,
-                    stackTrace = ex.StackTrace
-                };
-                return BadRequest(errorDetails);
+                return BadRequest(new { error = ex.Message });
             }
         }
-
-
 
 
         [HttpPost("add")]

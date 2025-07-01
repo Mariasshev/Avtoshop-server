@@ -10,7 +10,7 @@ namespace BLL.Interfaces
     public interface ICarService
     {
         Task<CarResponseDto> AddCarWithPhotosAsync(CarCreateDto dto, int userId);
-        Task<CarResponseDto> UpdateCarWithPhotosAsync(int carId, CarCreateDto dto, int userId);
+        Task<CarResponseDto> UpdateCarWithPhotosAsync(int carId, CarCreateDto dto, int userId, List<string> photosToDelete);
         Task<CarResponseDto> GetCarByIdAsync(int id);
         Task<CarResponseDto> UpdateCarAsync(CarUpdateDto dto);
 

@@ -19,8 +19,11 @@ public class CarCreateDto
     public string VIN { get; set; }
     public float Price { get; set; }
 
-    // Для загрузки нескольких файлов
-    public List<IFormFile> Photos { get; set; }
+    // Для загрузки нескольких 
+    public List<IFormFile>? Photos { get; set; } // новые файлы
+    public List<string>? PhotoUrls { get; set; }  // для передачи путей к фотографиям клиенту
+
+    public string? PhotosToDelete { get; set; }
     public string? Description { get; set; }
 
 }

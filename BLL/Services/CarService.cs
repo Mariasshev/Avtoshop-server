@@ -22,6 +22,7 @@ namespace BLL.Services
 
         public async Task<CarResponseDto> AddCarWithPhotosAsync(CarCreateDto dto, int userId)
         {
+            Console.WriteLine("AddCarWithPhotosAsync START");
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId)
                        ?? throw new Exception("User not found");
 
@@ -38,6 +39,7 @@ namespace BLL.Services
                     Photo = user.PhotoUrl ?? ""
                 };
                 _context.Salers.Add(saler);
+                await _context.SaveChangesAsync(); // Сохраняем, чтобы saler.Id был доступен
             }
 
             var car = new Car
@@ -56,17 +58,18 @@ namespace BLL.Services
                 Color = dto.Color,
                 VIN = dto.VIN,
                 Price = dto.Price,
-                Saler = saler,
+                SalerId = saler.Id,
                 Description = dto.Description,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 Photo = ""
             };
             _context.Cars.Add(car);
+            await _context.SaveChangesAsync(); // Сохраняем, чтобы получить car.Id
 
             if (dto.Photos != null && dto.Photos.Any())
             {
-                var uploadsFolder = Path.Combine("wwwroot", "uploads", "car_photos", userId.ToString());
+                var uploadsFolder = Path.Combine("wwwroot", "uploads", "car_photos", userId.ToString(), car.Id.ToString());
                 Directory.CreateDirectory(uploadsFolder);
 
                 var photoUrls = new List<string>();
@@ -80,27 +83,26 @@ namespace BLL.Services
                     using var stream = new FileStream(filePath, FileMode.Create);
                     await photo.CopyToAsync(stream);
 
-                    var relativePath = $"/uploads/car_photos/{userId}/{fileName}";
+                    var relativePath = $"/uploads/car_photos/{userId}/{car.Id}/{fileName}";
                     photoUrls.Add(relativePath);
 
                     _context.CarPhotos.Add(new CarPhoto
                     {
-                        Car = car,
+                        CarId = car.Id,
                         PhotoUrl = relativePath
                     });
                 }
 
                 car.Photo = photoUrls.First();
                 car.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
             }
 
-
             var carPhotos = await _context.CarPhotos
-                .Where(cp => cp.Car.Id == car.Id)
+                .Where(cp => cp.CarId == car.Id)
                 .Select(cp => cp.PhotoUrl)
                 .ToListAsync();
-
-            await _context.SaveChangesAsync();
 
             return new CarResponseDto
             {
@@ -116,16 +118,19 @@ namespace BLL.Services
         }
 
 
-        public async Task<CarResponseDto> UpdateCarWithPhotosAsync(int carId, CarCreateDto dto, int userId)
+        public async Task<CarResponseDto> UpdateCarWithPhotosAsync(int carId, CarCreateDto dto, int userId, List<string> photosToDelete)
         {
+            Console.WriteLine("UpdateCarWithPhotosAsync START");
+
             var car = await _context.Cars
-                .Include(c => c.CarPhotos) // если у тебя есть коллекция CarPhotos
+                .Include(c => c.CarPhotos)
+                .Include(c => c.Saler)
                 .FirstOrDefaultAsync(c => c.Id == carId && c.Saler.UserId == userId);
 
             if (car == null)
                 throw new Exception("Car not found or access denied");
 
-            // обновляем поля
+            // Обновляем поля машины
             car.Mileage = dto.Mileage;
             car.Year = dto.Year;
             car.Transmission = dto.Transmission;
@@ -143,10 +148,46 @@ namespace BLL.Services
             car.Description = dto.Description;
             car.UpdatedAt = DateTime.UtcNow;
 
-            // если загружены новые фото
+            // Удаляем фотографии, если есть список для удаления
+
+            Console.WriteLine($"photosToDelete is null: {photosToDelete }");
+            //Console.WriteLine($"photosToDelete count: {photosToDelete?.Count ?? 0}");
+            if (photosToDelete != null && photosToDelete.Count > 0)
+            {
+
+                var photosForDelete = car.CarPhotos.Where(cp => photosToDelete.Contains(cp.PhotoUrl)).ToList();
+
+                foreach (var photo in photosForDelete)
+                {
+                    var physicalPath = Path.Combine("wwwroot", photo.PhotoUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    Console.WriteLine($"Deleting file: {physicalPath}");
+                    if (File.Exists(physicalPath))
+                    {
+                        try
+                        {
+                            File.Delete(physicalPath);
+                            Console.WriteLine($"Deleted file: {physicalPath}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error deleting file {physicalPath}: {ex.Message}");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"File does not exist: {physicalPath}");
+                    }
+
+                    _context.CarPhotos.Remove(photo);
+                    Console.WriteLine($"Removed photo record: {photo.PhotoUrl}");
+                }
+            }
+
+
+            // Добавляем новые фото
             if (dto.Photos != null && dto.Photos.Any())
             {
-                var uploadsFolder = Path.Combine("wwwroot", "uploads", "car_photos", userId.ToString());
+                var uploadsFolder = Path.Combine("wwwroot", "uploads", "car_photos", userId.ToString(), car.Id.ToString());
                 Directory.CreateDirectory(uploadsFolder);
 
                 var photoUrls = new List<string>();
@@ -160,7 +201,7 @@ namespace BLL.Services
                     using var stream = new FileStream(filePath, FileMode.Create);
                     await photo.CopyToAsync(stream);
 
-                    var relativePath = $"/uploads/car_photos/{userId}/{fileName}";
+                    var relativePath = $"/uploads/car_photos/{userId}/{car.Id}/{fileName}";
                     photoUrls.Add(relativePath);
 
                     _context.CarPhotos.Add(new CarPhoto
@@ -170,11 +211,27 @@ namespace BLL.Services
                     });
                 }
 
-                // основное фото для карточки
+                // Обновляем основное фото (главную)
                 car.Photo = photoUrls.First();
+            }
+            else if (car.CarPhotos.Any())
+            {
+                // Если новых фото нет, но есть старые - устанавливаем первое в качестве основного
+                car.Photo = car.CarPhotos.First().PhotoUrl;
+            }
+            else
+            {
+                // Если фоток вообще нет, очищаем
+                car.Photo = "";
             }
 
             await _context.SaveChangesAsync();
+
+            // Формируем DTO для ответа
+            var photosList = await _context.CarPhotos
+                .Where(cp => cp.CarId == car.Id)
+                .Select(cp => cp.PhotoUrl)
+                .ToListAsync();
 
             return new CarResponseDto
             {
@@ -183,7 +240,7 @@ namespace BLL.Services
                 Model = car.Model,
                 Price = car.Price,
                 Photo = car.Photo,
-                //Description = car.Description,
+                Photos = photosList,
                 CreatedAt = car.CreatedAt,
                 UpdatedAt = car.UpdatedAt
             };

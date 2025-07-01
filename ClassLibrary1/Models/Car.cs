@@ -25,7 +25,7 @@ namespace Data_Access.Models
         public string VIN { get; set; }
         public float Price { get; set; }
         public string Photo { get; set; }
-        public ICollection<CarPhoto> CarPhotos { get; set; }
+        public ICollection<CarPhoto> CarPhotos { get; set; } = new List<CarPhoto>();
 
         public bool isOnStock { get; set; }
         public int SalerId { get; set; }
