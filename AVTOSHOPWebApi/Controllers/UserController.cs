@@ -32,6 +32,7 @@ namespace AVTOSHOPWebApi.Controllers
             }
 
             var email = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            //var email = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)?.Value;
             Console.WriteLine($"Найденный email (по NameIdentifier): {email}");
 
             if (email == null) return Unauthorized();
@@ -58,6 +59,7 @@ namespace AVTOSHOPWebApi.Controllers
             try
             {
                 var email = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+                //var email = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)?.Value;
                 Console.WriteLine($">>> UpdateProfile called for: {email}");
 
                 if (string.IsNullOrEmpty(email))
@@ -154,6 +156,7 @@ namespace AVTOSHOPWebApi.Controllers
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
         {
             var email = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+           
             if (string.IsNullOrEmpty(email))
                 return Unauthorized();
 
@@ -173,9 +176,6 @@ namespace AVTOSHOPWebApi.Controllers
 
             return Ok("Пароль успешно изменён");
         }
-
-
-
 
     }
 }

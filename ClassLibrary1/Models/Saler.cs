@@ -13,6 +13,9 @@ namespace Data_Access.Models
             this.Cars = new HashSet<Car>();
         }
         public int Id { get; set; }
+
+        public int? UserId { get; set; }           // связь с пользователем (можно nullable, если нужен)
+
         public string Name { get; set; }
         public string Photo { get; set; }
         public string Number { get; set; }
@@ -20,5 +23,8 @@ namespace Data_Access.Models
         public string Adress { get; set; }
         public virtual ICollection<Car> Cars { get; set; }
 
+        // Навигационное свойство к пользователю, если есть модель User
+        public virtual User User { get; set; }
     }
+
 }

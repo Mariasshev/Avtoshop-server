@@ -13,10 +13,12 @@ using System.IdentityModel.Tokens.Jwt;
 
 
 var builder = WebApplication.CreateBuilder(args);
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
-builder.Logging.SetMinimumLevel(LogLevel.Debug); // или LogLevel.Error
+builder.Logging.SetMinimumLevel(LogLevel.Debug); 
 
 
 // DB
@@ -34,6 +36,7 @@ builder.Services.AddDbContext<CarContext>(options =>
 // Репозитории и сервисы
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ICarService, CarService>();
 
 
 
@@ -129,11 +132,13 @@ var app = builder.Build();
 
 // Middleware
 app.UseHttpsRedirection();
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(Path.Combine(builder.Environment.ContentRootPath, "wwwroot")),
-    RequestPath = ""
-});
+app.UseStaticFiles();
+
+//app.UseStaticFiles(new StaticFileOptions
+//{
+//    FileProvider = new PhysicalFileProvider(Path.Combine(builder.Environment.ContentRootPath, "wwwroot")),
+//    RequestPath = ""
+//});
 app.UseCors("AllowAll");
 
 app.UseAuthentication();

@@ -25,6 +25,8 @@ namespace Data_Access.Models
         public string VIN { get; set; }
         public float Price { get; set; }
         public string Photo { get; set; }
+        public ICollection<CarPhoto> CarPhotos { get; set; }
+
         public bool isOnStock { get; set; }
         public int SalerId { get; set; }
 
@@ -32,9 +34,14 @@ namespace Data_Access.Models
         //public int? OrderId { get; set; }
 
         [ForeignKey("SalerId")]
-        public Saler? Saler { get; set; } // сделай nullable и без [Required]
+        public Saler? Saler { get; set; } // 
 
         public Order Order { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+        public string? Description { get; set; }
+
 
     }
 }

@@ -7,6 +7,7 @@ namespace Data_Access.Context
 {
     public class CarContext : DbContext
     {
+        public DbSet<CarPhoto> CarPhotos { get; set; }
 
         public DbSet<Car> Cars { get; set; }
         public DbSet<User> Users { get; set; }
