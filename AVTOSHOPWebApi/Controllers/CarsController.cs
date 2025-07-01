@@ -115,6 +115,79 @@ namespace AVTOSHOPWebApi.Controllers
 
             return Ok(car);
         }
+        [HttpGet("{id}/details")]
+        public async Task<ActionResult<CarCreateDto>> GetCarDetails(int id)
+        {
+            var car = await _context.Cars
+                .Where(c => c.Id == id)
+                .Select(c => new CarCreateDto
+                {
+                    Id = c.Id,
+                    Mileage = c.Mileage,
+                    Year = c.Year,
+                    Transmission = c.Transmission,
+                    FuelType = c.FuelType,
+                    Brand = c.Brand,
+                    Model = c.Model,
+                    DriverType = c.DriverType,
+                    Condition = c.Condition,
+                    EngineSize = c.EngineSize,
+                    Door = c.Door,
+                    Cylinder = c.Cylinder,
+                    Color = c.Color,
+                    VIN = c.VIN,
+                    Price = c.Price,
+                    Description = c.Description,
+                    //IsOnStock = c.isOnStock
+                })
+                .FirstOrDefaultAsync();
+
+            if (car == null) return NotFound();
+
+            return Ok(car);
+        }
+
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateCar(int id, [FromForm] CarCreateDto dto)
+        {
+            if (id != dto.Id)
+            {
+                Console.WriteLine($"Id from URL: {id}, Id from body: {dto.Id}");
+                return BadRequest(new { error = "Id in URL and body do not match" });
+            }
+                
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "userId");
+            if (userIdClaim == null)
+                return Unauthorized(new { error = "User claim not found" });
+
+            if (!int.TryParse(userIdClaim.Value, out int userId))
+                return Unauthorized(new { error = "Invalid user id in claim" });
+
+            try
+            {
+                var updatedCar = await _carService.UpdateCarWithPhotosAsync(id, dto, userId);
+                if (updatedCar == null)
+                    return NotFound(new { error = "Car not found or access denied" });
+
+                return Ok(updatedCar);
+            }
+            catch (Exception ex)
+            {
+                var errorDetails = new
+                {
+                    message = ex.Message,
+                    stackTrace = ex.StackTrace
+                };
+                return BadRequest(errorDetails);
+            }
+        }
+
+
 
 
         [HttpPost("add")]

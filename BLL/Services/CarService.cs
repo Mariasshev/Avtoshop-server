@@ -114,5 +114,131 @@ namespace BLL.Services
                 UpdatedAt = car.UpdatedAt
             };
         }
+
+
+        public async Task<CarResponseDto> UpdateCarWithPhotosAsync(int carId, CarCreateDto dto, int userId)
+        {
+            var car = await _context.Cars
+                .Include(c => c.CarPhotos) // если у тебя есть коллекция CarPhotos
+                .FirstOrDefaultAsync(c => c.Id == carId && c.Saler.UserId == userId);
+
+            if (car == null)
+                throw new Exception("Car not found or access denied");
+
+            // обновляем поля
+            car.Mileage = dto.Mileage;
+            car.Year = dto.Year;
+            car.Transmission = dto.Transmission;
+            car.FuelType = dto.FuelType;
+            car.Brand = dto.Brand;
+            car.Model = dto.Model;
+            car.DriverType = dto.DriverType;
+            car.Condition = dto.Condition;
+            car.EngineSize = dto.EngineSize;
+            car.Door = dto.Door;
+            car.Cylinder = dto.Cylinder;
+            car.Color = dto.Color;
+            car.VIN = dto.VIN;
+            car.Price = dto.Price;
+            car.Description = dto.Description;
+            car.UpdatedAt = DateTime.UtcNow;
+
+            // если загружены новые фото
+            if (dto.Photos != null && dto.Photos.Any())
+            {
+                var uploadsFolder = Path.Combine("wwwroot", "uploads", "car_photos", userId.ToString());
+                Directory.CreateDirectory(uploadsFolder);
+
+                var photoUrls = new List<string>();
+
+                foreach (var photo in dto.Photos)
+                {
+                    var ext = Path.GetExtension(photo.FileName);
+                    var fileName = $"{Guid.NewGuid()}{ext}";
+                    var filePath = Path.Combine(uploadsFolder, fileName);
+
+                    using var stream = new FileStream(filePath, FileMode.Create);
+                    await photo.CopyToAsync(stream);
+
+                    var relativePath = $"/uploads/car_photos/{userId}/{fileName}";
+                    photoUrls.Add(relativePath);
+
+                    _context.CarPhotos.Add(new CarPhoto
+                    {
+                        CarId = car.Id,
+                        PhotoUrl = relativePath
+                    });
+                }
+
+                // основное фото для карточки
+                car.Photo = photoUrls.First();
+            }
+
+            await _context.SaveChangesAsync();
+
+            return new CarResponseDto
+            {
+                Id = car.Id,
+                Brand = car.Brand,
+                Model = car.Model,
+                Price = car.Price,
+                Photo = car.Photo,
+                //Description = car.Description,
+                CreatedAt = car.CreatedAt,
+                UpdatedAt = car.UpdatedAt
+            };
+        }
+
+        public async Task<CarResponseDto> GetCarByIdAsync(int id)
+        {
+            var car = await _context.Cars
+                .Include(c => c.CarPhotos)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (car == null)
+                return null;
+
+            return new CarResponseDto
+            {
+                Id = car.Id,
+                Brand = car.Brand,
+                Model = car.Model,
+                Price = car.Price,
+                Photo = car.Photo,
+                Photos = car.CarPhotos?.Select(cp => cp.PhotoUrl).ToList() ?? new List<string>(),
+                CreatedAt = car.CreatedAt,
+                UpdatedAt = car.UpdatedAt,
+                // Добавь остальные нужные поля
+            };
+        }
+
+
+
+        public async Task<CarResponseDto> UpdateCarAsync(CarUpdateDto dto)
+        {
+            var car = await _context.Cars.FirstOrDefaultAsync(c => c.Id == dto.Id);
+            if (car == null) return null;
+
+            // обнови нужные поля, например
+            car.Brand = dto.Brand;
+            car.Model = dto.Model;
+            // и т.д.
+
+            await _context.SaveChangesAsync();
+
+            return new CarResponseDto
+            {
+                Id = car.Id,
+                Brand = car.Brand,
+                Model = car.Model,
+                Price = car.Price,
+                Photo = car.Photo,
+                CreatedAt = car.CreatedAt,
+                UpdatedAt = car.UpdatedAt
+            };
+        }
+
+
+
     }
 }

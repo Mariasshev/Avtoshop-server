@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 public class CarCreateDto
 {
+    public int Id { get; set; }
     public int Mileage { get; set; }
     public int Year { get; set; }
     public string Transmission { get; set; }
