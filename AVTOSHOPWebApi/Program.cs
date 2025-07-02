@@ -37,6 +37,7 @@ builder.Services.AddDbContext<CarContext>(options =>
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICarService, CarService>();
+builder.Services.AddScoped<ISalerRepository, SalerRepository>();
 
 
 

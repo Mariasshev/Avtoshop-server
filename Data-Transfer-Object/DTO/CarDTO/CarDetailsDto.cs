@@ -30,6 +30,13 @@ namespace Data_Transfer_Object.DTO.CarDTO
         public bool isOnStock { get; set; }
         public string? Description { get; set; }
 
+        // Новые поля:
+        public string SalerName { get; set; }
+        public string SalerPhoto { get; set; }
+        public string SalerAddress { get; set; }
+        public string SalerPhone { get; set; }
+
+
         //public SalerDto Saler { get; set; }
     }
 

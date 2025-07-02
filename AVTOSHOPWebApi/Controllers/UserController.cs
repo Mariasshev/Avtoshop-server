@@ -6,6 +6,7 @@ using System.Security.Claims;
 using Data_Transfer_Object.DTO.UserDTO;
 using Data_Access.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace AVTOSHOPWebApi.Controllers
 {
@@ -14,10 +15,12 @@ namespace AVTOSHOPWebApi.Controllers
     public class UserController : ControllerBase
     {
         private readonly IUserRepository _userRepository;
+        private readonly ISalerRepository _salerRepository;
 
-        public UserController(IUserRepository userRepository)
+        public UserController(IUserRepository userRepository, ISalerRepository salerRepository)
         {
             _userRepository = userRepository;
+            _salerRepository = salerRepository;
         }
 
 
@@ -88,8 +91,22 @@ namespace AVTOSHOPWebApi.Controllers
 
                 await _userRepository.UpdateAsync(user);
 
-                Console.WriteLine(">>> Данные успешно обновлены");
+                // Теперь обновляем Saler
+                var saler = await _salerRepository.GetSalerByUserIdAsync(user.Id);
+                if (saler != null)
+                {
+                    saler.Name = dto.Name ?? saler.Name;
+                    saler.Number = dto.PhoneNumber ?? saler.Number;
+                    saler.Adress = dto.City ?? saler.Adress;
+                    saler.Photo = user.PhotoUrl ?? saler.Photo;
+
+                    await _salerRepository.UpdateAsync(saler);
+                }
+
+
+                Console.WriteLine(">>> Данные успешно обновлены и в таблице Salers");
                 return Ok(new { message = "Данные успешно обновлены!" });
+
             }
             catch (Exception ex)
             {

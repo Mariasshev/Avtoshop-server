@@ -115,7 +115,13 @@ namespace AVTOSHOPWebApi.Controllers
                     Photo = car.Photo,
                     isOnStock = car.isOnStock,
                     SalerId = car.SalerId,
-                    Description = car.Description
+                    Description = car.Description,
+
+                    SalerName = car.Saler.Name,
+                    SalerPhoto = car.Saler.Photo,
+                    SalerAddress = car.Saler.Adress,
+                    SalerPhone = car.Saler.Number
+
                 })
                 .FirstOrDefaultAsync();
 
