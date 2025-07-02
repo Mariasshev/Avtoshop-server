@@ -23,9 +23,19 @@ namespace BLL.Services
         public async Task<CarResponseDto> AddCarWithPhotosAsync(CarCreateDto dto, int userId)
         {
             Console.WriteLine("AddCarWithPhotosAsync START");
+
+            // Проверяем пользователя
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId)
                        ?? throw new Exception("User not found");
 
+            // Проверяем, существует ли бренд с таким BrandId
+            var brandExists = await _context.Brands.AnyAsync(b => b.Id == dto.BrandId);
+            if (!brandExists)
+                throw new Exception($"Brand with Id {dto.BrandId} not found");
+
+
+
+            // Проверяем наличие Saler и создаём, если нужно
             var saler = await _context.Salers.FirstOrDefaultAsync(s => s.UserId == userId);
             if (saler == null)
             {
@@ -39,16 +49,17 @@ namespace BLL.Services
                     Photo = user.PhotoUrl ?? ""
                 };
                 _context.Salers.Add(saler);
-                await _context.SaveChangesAsync(); // Сохраняем, чтобы saler.Id был доступен
+                await _context.SaveChangesAsync(); // Чтобы получить saler.Id
             }
 
+            // Создаём машину с указанным BrandId
             var car = new Car
             {
                 Mileage = dto.Mileage,
                 Year = dto.Year,
                 Transmission = dto.Transmission,
                 FuelType = dto.FuelType,
-                Brand = dto.Brand,
+                BrandId = dto.BrandId,
                 Model = dto.Model,
                 DriverType = dto.DriverType,
                 Condition = dto.Condition,
@@ -64,9 +75,11 @@ namespace BLL.Services
                 UpdatedAt = DateTime.UtcNow,
                 Photo = ""
             };
-            _context.Cars.Add(car);
-            await _context.SaveChangesAsync(); // Сохраняем, чтобы получить car.Id
 
+            _context.Cars.Add(car);
+            await _context.SaveChangesAsync(); // Получаем car.Id
+
+            // Если есть фото — сохраняем
             if (dto.Photos != null && dto.Photos.Any())
             {
                 var uploadsFolder = Path.Combine("wwwroot", "uploads", "car_photos", userId.ToString(), car.Id.ToString());
@@ -99,6 +112,12 @@ namespace BLL.Services
                 await _context.SaveChangesAsync();
             }
 
+            // Загружаем машину с брендом (включаем Brand)
+            var savedCar = await _context.Cars
+                .Include(c => c.Brand)
+                .FirstOrDefaultAsync(c => c.Id == car.Id);
+
+            // Загружаем фото для DTO
             var carPhotos = await _context.CarPhotos
                 .Where(cp => cp.CarId == car.Id)
                 .Select(cp => cp.PhotoUrl)
@@ -106,16 +125,18 @@ namespace BLL.Services
 
             return new CarResponseDto
             {
-                Id = car.Id,
-                Brand = car.Brand,
-                Model = car.Model,
-                Price = car.Price,
-                Photo = car.Photo,
+                Id = savedCar.Id,
+                Brand = savedCar.Brand?.Name ?? "Неизвестно",   // Название бренда из навигационного свойства
+                Model = savedCar.Model,
+                Price = savedCar.Price,
+                Photo = savedCar.Photo,
                 Photos = carPhotos,
-                CreatedAt = car.CreatedAt,
-                UpdatedAt = car.UpdatedAt
+                CreatedAt = savedCar.CreatedAt,
+                UpdatedAt = savedCar.UpdatedAt
             };
         }
+
+
 
 
         public async Task<CarResponseDto> UpdateCarWithPhotosAsync(int carId, CarCreateDto dto, int userId, List<string> photosToDelete)
@@ -123,9 +144,11 @@ namespace BLL.Services
             Console.WriteLine("UpdateCarWithPhotosAsync START");
 
             var car = await _context.Cars
-                .Include(c => c.CarPhotos)
-                .Include(c => c.Saler)
-                .FirstOrDefaultAsync(c => c.Id == carId && c.Saler.UserId == userId);
+             .Include(c => c.Brand)
+             .Include(c => c.CarPhotos)
+             .FirstOrDefaultAsync(c => c.Id == carId);
+
+            Console.WriteLine($"UpdateCarWithPhotosAsync: Loaded car.Brand: {(car.Brand != null ? car.Brand.Name : "null")}");
 
             if (car == null)
                 throw new Exception("Car not found or access denied");
@@ -135,7 +158,7 @@ namespace BLL.Services
             car.Year = dto.Year;
             car.Transmission = dto.Transmission;
             car.FuelType = dto.FuelType;
-            car.Brand = dto.Brand;
+            car.BrandId = dto.BrandId;
             car.Model = dto.Model;
             car.DriverType = dto.DriverType;
             car.Condition = dto.Condition;
@@ -236,7 +259,7 @@ namespace BLL.Services
             return new CarResponseDto
             {
                 Id = car.Id,
-                Brand = car.Brand,
+                Brand = car.Brand.Name,
                 Model = car.Model,
                 Price = car.Price,
                 Photo = car.Photo,
@@ -252,13 +275,16 @@ namespace BLL.Services
                 .Include(c => c.CarPhotos)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
+            Console.WriteLine($"GetCarByIdAsync: car.Brand: {(car.Brand != null ? car.Brand.Name : "null")}");
+
+
             if (car == null)
                 return null;
 
             return new CarResponseDto
             {
                 Id = car.Id,
-                Brand = car.Brand,
+                Brand = car.Brand.Name,
                 Model = car.Model,
                 Price = car.Price,
                 Photo = car.Photo,
@@ -273,20 +299,26 @@ namespace BLL.Services
 
         public async Task<CarResponseDto> UpdateCarAsync(CarUpdateDto dto)
         {
-            var car = await _context.Cars.FirstOrDefaultAsync(c => c.Id == dto.Id);
+            var car = await _context.Cars
+                .Include(c => c.Brand) // обязательно включаем навигационное свойство
+                .FirstOrDefaultAsync(c => c.Id == dto.Id);
+            Console.WriteLine($"UpdateCarAsync: car.Brand: {(car.Brand != null ? car.Brand.Name : "null")}");
             if (car == null) return null;
 
-            // обнови нужные поля, например
-            car.Brand = dto.Brand;
+            // обновляем нужные поля
+            car.BrandId = dto.BrandId; // теперь BrandId
             car.Model = dto.Model;
-            // и т.д.
+            // обнови и другие поля, если нужно, например:
+            car.Price = dto.Price;
+            car.Description = dto.Description;
+            car.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
             return new CarResponseDto
             {
                 Id = car.Id,
-                Brand = car.Brand,
+                Brand = car.Brand.Name,   // теперь возвращаем название бренда
                 Model = car.Model,
                 Price = car.Price,
                 Photo = car.Photo,
@@ -294,8 +326,6 @@ namespace BLL.Services
                 UpdatedAt = car.UpdatedAt
             };
         }
-
-
 
     }
 }

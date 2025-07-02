@@ -134,11 +134,50 @@ var app = builder.Build();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
-//app.UseStaticFiles(new StaticFileOptions
-//{
-//    FileProvider = new PhysicalFileProvider(Path.Combine(builder.Environment.ContentRootPath, "wwwroot")),
-//    RequestPath = ""
-//});
+
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<CarContext>();
+
+    if (!context.Brands.Any())
+    {
+        var toyota = new CarBrands
+        {
+            Name = "Toyota",
+            Models = new List<CarModel>
+        {
+            new CarModel { Name = "Camry" },
+            new CarModel { Name = "Corolla" },
+            new CarModel { Name = "Land Cruiser" }
+        }
+        };
+        var bmw = new CarBrands
+        {
+            Name = "BMW",
+            Models = new List<CarModel>
+        {
+            new CarModel { Name = "X5" },
+            new CarModel { Name = "3 Series" },
+            new CarModel { Name = "5 Series" }
+        }
+        };
+        var audi = new CarBrands
+        {
+            Name = "Audi",
+            Models = new List<CarModel>
+        {
+            new CarModel { Name = "A4" },
+            new CarModel { Name = "Q7" },
+            new CarModel { Name = "A6" }
+        }
+        };
+
+        context.Brands.AddRange(toyota, bmw, audi);
+        context.SaveChanges();
+    }
+}
+
 app.UseCors("AllowAll");
 
 app.UseAuthentication();

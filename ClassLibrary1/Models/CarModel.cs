@@ -9,10 +9,9 @@ namespace Data_Access.Models
     public class CarModel
     {
         public int Id { get; set; }
+        public string Name { get; set; }
 
-        public string Name { get; set; } = null!;
-
-        // Внешний ключ - к какой марке относится
         public int BrandId { get; set; }
+        public CarBrands Brand { get; set; }
     }
 }

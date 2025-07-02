@@ -39,7 +39,7 @@ namespace AVTOSHOPWebApi.Controllers
                 Mileage = model.Mileage,
                 Year = model.Year,
                 Transmission = model.Transmission,
-                Brand = model.Brand,
+                BrandId = model.BrandId,
                 Model = model.Model,
                 FuelType = model.FuelType,
                 DriverType = model.DriverType,
@@ -72,7 +72,7 @@ namespace AVTOSHOPWebApi.Controllers
                 {
                     Id = car.Id,
                     Photo = car.Photo,
-                    Brand = car.Brand,
+                    Brand = car.Brand.Name,
                     Model = car.Model,
                     Title = car.Brand + " " + car.Model + " " + car.Year,
                     Badge = car.Condition,
@@ -98,7 +98,7 @@ namespace AVTOSHOPWebApi.Controllers
                 {
                     Id = car.Id,
                     Photo = car.Photo,
-                    Brand = car.Brand,
+                    Brand = car.Brand.Name,
                     Model = car.Model,
                     Title = car.Brand + " " + car.Model + " " + car.Year,
                     Badge = car.Condition,
@@ -131,7 +131,8 @@ namespace AVTOSHOPWebApi.Controllers
                 Year = car.Year,
                 Transmission = car.Transmission,
                 FuelType = car.FuelType,
-                Brand = car.Brand,
+                BrandId = car.BrandId,
+                //Brand = car.Brand.Name,
                 Model = car.Model,
                 DriverType = car.DriverType,
                 Condition = car.Condition,
@@ -172,10 +173,8 @@ namespace AVTOSHOPWebApi.Controllers
                 {
                     Console.WriteLine("- " + p);
                 }
-
             }
 
-            //List<string> photosToDeleteList = dto.PhotosToDelete ?? new List<string>();
 
             try
             {
@@ -235,6 +234,31 @@ namespace AVTOSHOPWebApi.Controllers
                 .ToListAsync();
 
             return Ok(cars);
+        }
+
+
+
+        // DELETE api/cars/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteCar(int id)
+        {
+            var car = await _context.Cars.FindAsync(id);
+            if (car == null)
+                return NotFound(); // Объявление не найдено
+
+            _context.Cars.Remove(car);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                // Логируем ошибку, если нужно
+                return StatusCode(500, "Ошибка при удалении объявления");
+            }
+
+            return NoContent(); // Успешно удалено, возвращаем 204 No Content
         }
 
 

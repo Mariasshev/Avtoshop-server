@@ -15,8 +15,8 @@ namespace Data_Access.Context
         public DbSet<Saler> Salers { get; set; }
 
         public DbSet<CarBrands> Brands { get; set; } = null!;
-        public DbSet<CarModel> Models { get; set; } = null!;
 
+        public DbSet<CarModel> Models { get; set; } = null!;
 
         public DbSet<BlogItem> Blog { get; set; }
 
