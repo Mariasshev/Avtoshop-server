@@ -28,6 +28,7 @@ namespace Data_Transfer_Object.DTO.CarDTO
         public float Price { get; set; }
         public string Photo { get; set; }
         public bool isOnStock { get; set; }
+        public string? Description { get; set; }
 
         //public SalerDto Saler { get; set; }
     }

@@ -90,23 +90,32 @@ namespace AVTOSHOPWebApi.Controllers
         // GET: api/cars/{id}
         // Получение машины по ID (полезно для CreatedAtAction)
         [HttpGet("{id}")]
-        public async Task<ActionResult<CarListItemDto>> GetCarById(int id)
+        public async Task<ActionResult<CarDetailsDto>> GetCarById(int id)
         {
             var car = await _context.Cars
                 .Where(c => c.Id == id)
-                .Select(car => new CarListItemDto
+                .Select(car => new CarDetailsDto
                 {
                     Id = car.Id,
-                    Photo = car.Photo,
                     Brand = car.Brand.Name,
                     Model = car.Model,
-                    Title = car.Brand + " " + car.Model + " " + car.Year,
-                    Badge = car.Condition,
-                    Fuel = car.FuelType,
+                    FuelType = car.FuelType,
                     Price = car.Price,
                     Transmission = car.Transmission,
                     Year = car.Year,
-                    Mileage = car.Mileage
+                    Mileage = car.Mileage,
+                    BrandId = car.BrandId,
+                    DriverType = car.DriverType,
+                    Condition = car.Condition,
+                    EngineSize = car.EngineSize,
+                    Door = car.Door,
+                    Cylinder = car.Cylinder,
+                    Color = car.Color,
+                    VIN = car.VIN,
+                    Photo = car.Photo,
+                    isOnStock = car.isOnStock,
+                    SalerId = car.SalerId,
+                    Description = car.Description
                 })
                 .FirstOrDefaultAsync();
 
@@ -115,6 +124,8 @@ namespace AVTOSHOPWebApi.Controllers
 
             return Ok(car);
         }
+
+
         [HttpGet("{id}/details")]
         public async Task<ActionResult<CarCreateDto>> GetCarDetails(int id)
         {
