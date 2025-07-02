@@ -97,7 +97,7 @@ namespace AVTOSHOPWebApi.Controllers
                 {
                     saler.Name = dto.Name ?? saler.Name;
                     saler.Number = dto.PhoneNumber ?? saler.Number;
-                    saler.Adress = dto.City ?? saler.Adress;
+                    saler.Adress = $"{dto.City}, {dto.Country}";
                     saler.Photo = user.PhotoUrl ?? saler.Photo;
 
                     await _salerRepository.UpdateAsync(saler);
