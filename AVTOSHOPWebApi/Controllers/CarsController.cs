@@ -26,6 +26,90 @@ namespace AVTOSHOPWebApi.Controllers
             _carService = carService;
         }
 
+
+        // GET: api/cars/filter-cars
+        [HttpGet("filter-cars")]
+        public async Task<IActionResult> GetFilteredCars(
+            [FromQuery] int? brandId,
+            [FromQuery] string? modelName,
+            [FromQuery] string? transmission,
+            [FromQuery] string? fuelType,
+            [FromQuery] string? color,
+            [FromQuery] string? driverType,
+            [FromQuery] string? condition,
+            [FromQuery] int? yearMin,
+            [FromQuery] int? yearMax,
+            [FromQuery] float? engineSizeMin,
+            [FromQuery] float? engineSizeMax,
+            [FromQuery] int? door,
+            [FromQuery] int? cylinder,
+            [FromQuery] int? mileage,
+            [FromQuery] float? priceMin,
+            [FromQuery] float? priceMax,
+            [FromQuery] bool? hasVin
+        )
+        {
+            var query = _context.Cars.Include(c => c.Brand).AsQueryable();
+
+            if (brandId.HasValue)
+                query = query.Where(c => c.BrandId == brandId.Value);
+
+            if (!string.IsNullOrEmpty(modelName))
+                query = query.Where(c => c.Model == modelName);
+
+            if (!string.IsNullOrEmpty(transmission))
+                query = query.Where(c => c.Transmission == transmission);
+
+            if (!string.IsNullOrEmpty(fuelType))
+                query = query.Where(c => c.FuelType == fuelType);
+
+            if (!string.IsNullOrEmpty(color))
+                query = query.Where(c => c.Color == color);
+
+            if (!string.IsNullOrEmpty(driverType))
+                query = query.Where(c => c.DriverType == driverType);
+
+            if (!string.IsNullOrEmpty(condition))
+                query = query.Where(c => c.Condition == condition);
+
+            if (yearMin.HasValue)
+                query = query.Where(c => c.Year >= yearMin.Value);
+
+            if (yearMax.HasValue)
+                query = query.Where(c => c.Year <= yearMax.Value);
+
+            if (engineSizeMin.HasValue)
+                query = query.Where(c => c.EngineSize >= engineSizeMin.Value);
+
+            if (engineSizeMax.HasValue)
+                query = query.Where(c => c.EngineSize <= engineSizeMax.Value);
+
+            if (door.HasValue)
+                query = query.Where(c => c.Door == door.Value);
+
+            if (cylinder.HasValue)
+                query = query.Where(c => c.Cylinder == cylinder.Value);
+
+            if (mileage.HasValue)
+                query = query.Where(c => c.Mileage <= mileage.Value);
+
+            if (priceMin.HasValue)
+                query = query.Where(c => c.Price >= priceMin.Value);
+
+            if (priceMax.HasValue)
+                query = query.Where(c => c.Price <= priceMax.Value);
+
+            if (hasVin.HasValue && hasVin.Value)
+                query = query.Where(c => !string.IsNullOrEmpty(c.VIN));
+
+            var result = await query.ToListAsync();
+
+            return Ok(result);
+        }
+
+
+
+
         // POST: api/cars
         // Добавление новой машины
         [HttpPost]
